@@ -240,7 +240,7 @@ function mondca_process_payment($purchase_data) {
 				
 				if($respcode < '50' && $respcode > '0'){
 					
-					//edd_update_payment_status($payment, 'publish');
+					edd_update_payment_status($payment, 'publish');
 
 					edd_insert_payment_note( $payment, sprintf( __('Moneris CA Payment %s. The Transaction Id is %s', 'mondca_patsatech'), $mess, $txnno ) );
 					
