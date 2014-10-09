@@ -186,7 +186,7 @@ function mondca_process_payment($purchase_data) {
 					'pan'=>$pan,
 					'expdate'=>$expiry_date,
 					'crypt_type'=>$crypt,
-					'cavv' => $cavv
+					//'cavv' => $cavv
 				);
 				
 				/**************************** Transaction Object *****************************/
@@ -243,7 +243,7 @@ function mondca_process_payment($purchase_data) {
 				
 			}else{
 				
-				$type = 'cavv_purchase';
+				$type = 'purchase';
 				//$cust_id = $order->order_key;
 				$amount = number_format($purchase_data['price'], 2, '.', '');
 				$pan = $purchase_data['post_data']['card_number'];
