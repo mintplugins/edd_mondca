@@ -1456,4 +1456,24 @@ class mpgCvdInfo
 
 		return "<cvd_info>$xmlString</cvd_info>";
 	}
+
 }//end class
+
+/**
+ * Detect if the current purchase is for a recurring product
+ *
+ * @access      public
+ * @since       1.5
+ * @return      bool
+ */
+
+function eddmondca_is_recurring_purchase( $purchase_data ) {
+
+	if ( ! class_exists( 'EDD_Recurring' ) )
+		return false;
+
+	if ( EDD_Recurring()->is_purchase_recurring( $purchase_data ) )
+		return true;
+
+	return false;
+}
