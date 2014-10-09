@@ -99,6 +99,7 @@ function mondca_process_payment($purchase_data) {
 				$cavv = $purchase_data['post_data']['card_cvc'];
 				$expiry_date = substr($purchase_data['post_data']['card_exp_year'], -2).sprintf("%02s", $purchase_data['post_data']['card_exp_month']);
 				$crypt = '7';
+				$status_check = 'false';	
 				$stamp = date("YdmHisB");
 				$orderid = $stamp.'|'.$payment;
 
