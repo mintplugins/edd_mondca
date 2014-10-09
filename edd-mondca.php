@@ -105,8 +105,6 @@ function mondca_process_payment($purchase_data) {
 
 				/********************************* Recur Variables ****************************/
 				
-				$startNow = 'true';
-				
 				foreach( $purchase_data['downloads'] as $download ) {
 					if( isset( $download['options'] ) && isset( $download['options']['recurring'] ) ) {
 
