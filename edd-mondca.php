@@ -88,9 +88,9 @@ function mondca_process_payment($purchase_data) {
 			$store_id = $edd_options['mondca_storeid'];
 			$api_token = $edd_options['mondca_apitoken'];
 			
-			if( !empty( $purchase_data['downloads'][0]['options']['recurring']['times'] ) ){
+			//If this is a recurring payment
+			if ( eddmondca_is_recurring_purchase( $purchase_data ) ) {
 				
-				$type = 'cavv_purchase';
 				//$cust_id = $order->order_key;
 				$amount = number_format($trialAmount, 2, '.', '');
 				$pan = $purchase_data['post_data']['card_number'];
