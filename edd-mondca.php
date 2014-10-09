@@ -91,6 +91,8 @@ function mondca_process_payment($purchase_data) {
 			//If this is a recurring payment
 			if ( eddmondca_is_recurring_purchase( $purchase_data ) ) {
 				
+				
+				$type = 'purchase';
 				//$cust_id = $order->order_key;
 				$amount = number_format($trialAmount, 2, '.', '');
 				$pan = $purchase_data['post_data']['card_number'];
@@ -262,7 +264,7 @@ function mondca_process_payment($purchase_data) {
 				       			'amount' => $amount,
 				       			'pan' => $pan,
 				       			'expdate' => $expiry_date,
-								'cavv' => $cavv
+								//'cavv' => $cavv
 				          		);
 				
 				/********************** Transaction Object ****************************/
@@ -1448,5 +1450,4 @@ class mpgCvdInfo
 
 		return "<cvd_info>$xmlString</cvd_info>";
 	}
-
 }//end class
