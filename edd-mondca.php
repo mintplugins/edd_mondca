@@ -121,20 +121,25 @@ function mondca_process_payment($purchase_data) {
 						switch( $download['options']['recurring']['period'] ) {
 							case 'day' :
 								$recurUnit = 'day';
+								$period = '1';
+								$startDate = date('Y/m/d', strtotime('+1 day', strtotime(date('Y/m/d') ) ) ); // 1 day from now
 							break;
 							case 'week' :
 								$recurUnit = 'week';
+								$period = '1';
+								$startDate = date('Y/m/d', strtotime('+1 week', strtotime(date('Y/m/d') ) ) ); // 1 week from now
 							break;
 							case 'month' :
 								$recurUnit = 'month';
+								$period = '1';
+								$startDate = date('Y/m/d', strtotime('+1 month', strtotime(date('Y/m/d') ) ) ); // 1 month from now
 							break;
 							case 'year' :
-								$recurUnit = 'year';
+								$recurUnit = 'month';
+								$period = '12';
+								$startDate = date('Y/m/d', strtotime('+1 year', strtotime(date('Y/m/d') ) ) ); // 1 year from now
 							break;
 						}
-												
-						// One period unit (every week, every month, etc)
-						$recurInterval = '1';
 												
 						// How many times should the payment recur?
 						$times = intval( $download['options']['recurring']['times'] );
@@ -142,7 +147,14 @@ function mondca_process_payment($purchase_data) {
 						switch( $times ) {
 							// Unlimited
 							case '0' :
-								$numRecurs = '99999999999';
+								//If this is a yearly recurr
+								if ( $recurUnit == 'month' && $period == 12 ){
+									$numRecurs = '9'; //Moneris doesn't recommend going higher than 10 years for this.	
+								}
+								else{
+									$numRecurs = '99'; //This is the maximum number that Moneris allows. See pg. 39 of Moneris Documentation.
+								}
+								
 								break;
 							// Recur the number of times specified
 							default :
@@ -153,8 +165,6 @@ function mondca_process_payment($purchase_data) {
 					}
 					
 				}
-				
-				$startDate = date('Y/m/d', strtotime('+1 day', strtotime(date('Y/m/d'))));
 				
 				//if($trialAmount <= 0){
 					//$startDate = date('Y/m/d', strtotime($startDate. ' + 1 '.$recurUnit));
@@ -168,7 +178,7 @@ function mondca_process_payment($purchase_data) {
 					'recur_unit'=>$recurUnit, // (day | week | month)
 					'start_date'=>$startDate, //yyyy/mm/dd
 					'num_recurs'=>$numRecurs,
-					'start_now'=>$startNow,
+					'start_now'=>true,
 					'period' => $recurInterval,
 					'recur_amount'=> number_format($recurAmount, 2, '.', '')
 				);
