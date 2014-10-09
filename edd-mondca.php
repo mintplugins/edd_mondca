@@ -3,7 +3,7 @@
 Plugin Name: Moneris Canada Direct Recurring for Easy Digital Downloads
 Plugin URL: http://www.pastatech.com
 Description: Easy Digital Downloads Plugin for accepting payment through Moneris Direct Canada Gateway.
-Version: 1.0.2
+Version: 1.0.1
 Author: PatSaTECH
 Author URI: http://www.pastatech.com
 */
@@ -94,7 +94,7 @@ function mondca_process_payment($purchase_data) {
 				
 				$type = 'purchase';
 				//$cust_id = $order->order_key;
-				$amount = number_format($trialAmount, 2, '.', '');
+				$amount = number_format($purchase_data['price'], 2, '.', '');
 				$pan = $purchase_data['post_data']['card_number'];
 				$cavv = $purchase_data['post_data']['card_cvc'];
 				$expiry_date = substr($purchase_data['post_data']['card_exp_year'], -2).sprintf("%02s", $purchase_data['post_data']['card_exp_month']);
@@ -112,12 +112,12 @@ function mondca_process_payment($purchase_data) {
 						// Set signup fee, if any
 						if( ! empty( $download['options']['recurring']['signup_fee'] ) ) {
 							$purchase_data['price'] -= $download['options']['recurring']['signup_fee'];
-							$trialAmount = $download['options']['recurring']['signup_fee'] + $purchase_data['price'];
+							//$trialAmount = $download['options']['recurring']['signup_fee'] + $purchase_data['price'];
 						}
 
 						// Set the recurring amount
 						$recurAmount  = $purchase_data['price'];
-						
+												
 						// Set the recurring period
 						switch( $download['options']['recurring']['period'] ) {
 							case 'day' :
@@ -133,35 +133,34 @@ function mondca_process_payment($purchase_data) {
 								$recurUnit = 'year';
 							break;
 						}
-						
+												
 						// One period unit (every week, every month, etc)
 						$recurInterval = '1';
-						
+												
 						// How many times should the payment recur?
 						$times = intval( $download['options']['recurring']['times'] );
 						
 						switch( $times ) {
 							// Unlimited
 							case '0' :
-								$numRecurs = '1';
 								break;
 							// Recur the number of times specified
 							default :
 								$numRecurs = $times;
 								break;
 						}
-						
+												
 					}
 					
 				}
 				
 				$startDate = date('Y/m/d');
 				
-				if($trialAmount <= 0){
-					$startDate = date('Y/m/d', strtotime($startDate. ' + 1 '.$recurUnit));
-					$amount = number_format($recurAmount, 2, '.', '');
-					--$numRecurs;
-				}
+				//if($trialAmount <= 0){
+					//$startDate = date('Y/m/d', strtotime($startDate. ' + 1 '.$recurUnit));
+					//$amount = number_format($recurAmount, 2, '.', '');
+					//--$numRecurs;
+				//}
 				
 				/*********************** Recur Associative Array **********************/
 				
