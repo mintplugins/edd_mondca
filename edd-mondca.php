@@ -93,13 +93,10 @@ function mondca_process_payment($purchase_data) {
 				
 				
 				$type = 'purchase';
-				//$cust_id = $order->order_key;
 				$amount = number_format($purchase_data['price'], 2, '.', '');
 				$pan = $purchase_data['post_data']['card_number'];
 				$cavv = $purchase_data['post_data']['card_cvc'];
 				$expiry_date = substr($purchase_data['post_data']['card_exp_year'], -2).sprintf("%02s", $purchase_data['post_data']['card_exp_month']);
-				$crypt = '7';
-				$status_check = 'false';	
 				$stamp = date("YdmHisB");
 				$orderid = $stamp.'|'.$payment;
 
@@ -113,7 +110,7 @@ function mondca_process_payment($purchase_data) {
 						// Set signup fee, if any
 						if( ! empty( $download['options']['recurring']['signup_fee'] ) ) {
 							$purchase_data['price'] -= $download['options']['recurring']['signup_fee'];
-							//$trialAmount = $download['options']['recurring']['signup_fee'] + $purchase_data['price'];
+							$trialAmount = $download['options']['recurring']['signup_fee'] + $purchase_data['price']; // This is to makes sure signup fee is charged along with first recurring payment. As there is no separate variable to send sign up fee.
 						}
 
 						// Set the recurring amount
@@ -122,21 +119,26 @@ function mondca_process_payment($purchase_data) {
 						// Set the recurring period
 						switch( $download['options']['recurring']['period'] ) {
 							case 'day' :
-								$recurUnit = 'day';
+								$period		= '1';
+								$recurUnit 	= 'day';
+								$max_recur 	= '3650'; //Max number of recurring days supported.
 							break;
 							case 'week' :
-								$recurUnit = 'week';
+								$period		= '1';
+								$recurUnit 	= 'week';
+								$max_recur 	= '520'; //Max number of recurring weeks supported.
 							break;
 							case 'month' :
-								$recurUnit = 'month';
+								$period		= '1';
+								$recurUnit 	= 'month';
+								$max_recur 	= '120'; //Max number of recurring months supported.
 							break;
 							case 'year' :
-								$recurUnit = 'year';
+								$period		= '12';
+								$recurUnit 	= 'month';
+								$max_recur 	= '120'; //Max number of recurring years supported.
 							break;
 						}
-												
-						// One period unit (every week, every month, etc)
-						$recurInterval = '1';
 												
 						// How many times should the payment recur?
 						$times = intval( $download['options']['recurring']['times'] );
@@ -144,7 +146,7 @@ function mondca_process_payment($purchase_data) {
 						switch( $times ) {
 							// Unlimited
 							case '0' :
-								$numRecurs = '99999999999';
+								$numRecurs = $max_recur;
 								break;
 							// Recur the number of times specified
 							default :
@@ -156,23 +158,24 @@ function mondca_process_payment($purchase_data) {
 					
 				}
 				
-				$startDate = date('Y/m/d');
+				$date = new DateTime(date('Y/m/d'), new DateTimeZone('Canada/Central'));
+				$startDate = $date->format('Y/m/d');
+				$startDate = date('Y/m/d', strtotime( $startDate. ' + 1 '.$recurUnit ) ); // This postponeds the start Date to next recurring payment as one installment is already charged along with signup fee.
+				--$numRecurs;
 				
-				//if($trialAmount <= 0){
-					//$startDate = date('Y/m/d', strtotime($startDate. ' + 1 '.$recurUnit));
-					//$amount = number_format($recurAmount, 2, '.', '');
-					//--$numRecurs;
-				//}
+				if($trialAmount <= 0){
+					$amount = number_format($recurAmount, 2, '.', '');
+				}
 				
 				/*********************** Recur Associative Array **********************/
 				
 				$recurArray = array(
-					'recur_unit'=>$recurUnit, // (day | week | month)
-					'start_date'=>$startDate, //yyyy/mm/dd
-					'num_recurs'=>$numRecurs,
-					'start_now'=>$startNow,
-					'period' => $recurInterval,
-					'recur_amount'=> number_format($recurAmount, 2, '.', '')
+					'recur_unit'	=>$recurUnit, // (day | week | month)
+					'start_date'	=>$startDate, //yyyy/mm/dd
+					'num_recurs'	=>$numRecurs,
+					'start_now'		=>$startNow,
+					'period' 		=> $period,
+					'recur_amount'	=> number_format($recurAmount, 2, '.', '')
 				);
 				
 				$mpgRecur = new mpgRecur($recurArray);
@@ -180,15 +183,30 @@ function mondca_process_payment($purchase_data) {
 				/*********************** Transactional Associative Array **********************/
 				
 				$txnArray = array(
-					'type'=>$type,
-					'order_id'=>$orderid,
-					'cust_id'=>'',
-					'amount'=>$amount,
-					'pan'=>$pan,
-					'expdate'=>$expiry_date,
-					'crypt_type'=>$crypt,
-					//'cavv' => $cavv
+					'type'		=>$type,
+					'order_id'	=>$orderid,
+					'amount'	=>$amount,
+					'pan'		=>$pan,
+					'expdate'	=>$expiry_date,
+					'crypt_type'=>'7'
 				);
+				
+				/******************** Customer Information Object *********************/
+				
+				$mpgCustInfo = new mpgCustInfo();
+				
+				$billing = array(
+									 'first_name' => $purchase_data['post_data']['edd_first'],
+					                 'last_name' => $purchase_data['post_data']['edd_last'],
+					                 'address' => $purchase_data['post_data']['card_address'].', '.$purchase_data['post_data']['card_address_2'],
+					                 'city' => $purchase_data['post_data']['card_city'],
+					                 'province' => $purchase_data['post_data']['card_state'],
+					                 'postal_code' => $purchase_data['post_data']['card_zip']
+				                 );
+				
+				$mpgCustInfo->setBilling($billing);
+						
+				$mpgCustInfo->setEmail($purchase_data['post_data']['edd_email']);
 				
 				/**************************** Transaction Object *****************************/
 				
@@ -197,6 +215,10 @@ function mondca_process_payment($purchase_data) {
 				/****************************** Recur Object *********************************/
 				
 				$mpgTxn->setRecur($mpgRecur);
+
+				/******************** Set Customer Information ************************/
+				
+				$mpgTxn->setCustInfo($mpgCustInfo);
 				
 				/****************************** Request Object *******************************/
 				
@@ -204,14 +226,13 @@ function mondca_process_payment($purchase_data) {
 				
 				/***************************** HTTPS Post Object *****************************/
 				
-				$mpgHttpPost  =new mpgHttpsPost($store_id,$api_token,$mpgRequest);
+				$mpgHttpPost = new mpgHttpsPost($store_id,$api_token,$mpgRequest);
 				
 				/******************************* Response ************************************/
 				
-				$mpgResponse=$mpgHttpPost->getMpgResponse();
+				$mpgResponse = $mpgHttpPost->getMpgResponse();
 				
 				$txnno = $mpgResponse->getTxnNumber();
-				$receipt = explode("|",$mpgResponse->getReceiptId());
 				$respcode = $mpgResponse->getResponseCode();
 				$refnum = $mpgResponse->getReferenceNum();
 				$auth = $mpgResponse->getAuthCode();
@@ -219,14 +240,32 @@ function mondca_process_payment($purchase_data) {
 				
 				if($respcode < '50' && $respcode > '0'){
 					
-					edd_update_payment_status($payment, 'publish');
-					
-					edd_insert_payment_note( $payment, sprintf( __('Moneris CA Payment %s. The SecurePay Transaction Id is %s', 'spxml_patsatech'), $mess, $txnno ) );
+					//edd_update_payment_status($payment, 'publish');
+
+					edd_insert_payment_note( $payment, sprintf( __('Moneris CA Payment %s. The Transaction Id is %s', 'mondca_patsatech'), $mess, $txnno ) );
 					
 					edd_insert_payment_note( $payment,  ' Recurring Success: ' . $mpgResponse->getRecurSuccess() );
-					
-					edd_insert_payment_note( $payment,  ' Recurring Info: ' . json_encode( $recurArray ) . ' $mpgRecur: ' . $mpgRecur);
-					
+
+					$user_id  = $payment_data['user_info']['id'];
+
+					// Set user as subscriber
+					EDD_Recurring_Customer::set_as_subscriber( $user_id );
+
+					// store the customer recurring ID
+					EDD_Recurring_Customer::set_customer_id( $user_id, $mpgResponse->getReceiptId() );
+
+					// Store the original payment ID in the customer meta
+					EDD_Recurring_Customer::set_customer_payment_id( $user_id, $payment );
+
+					// Set the customer's status to active
+					EDD_Recurring_Customer::set_customer_status( $user_id, 'active' );
+
+					// Calculate the customer's new expiration date
+					$new_expiration = EDD_Recurring_Customer::calc_user_expiration( $user_id, $payment );
+
+					// Set the customer's new expiration date
+					EDD_Recurring_Customer::set_customer_expiration( $user_id, $new_expiration );
+	
 					edd_empty_cart();
 					
 					edd_send_to_success_page();
@@ -234,10 +273,10 @@ function mondca_process_payment($purchase_data) {
 				}else{
 					
 					if ( strpos( $mess, 'DECLINED' ) === true ){
-						$error_message = __('Transaction Error. ','mondca_patsatech')  . $mess . ' - ' . __( 'Sometimes this can occur if you don’t normally make large purchase online. You may need to confirm with your bank.','mondca_patsatech') . '<pre>' . print_r( $mpgTxn, TRUE ) . '</pre>';
+						$error_message = __('Transaction Error. ','mondca_patsatech')  . $mess . ' - ' . __( 'Sometimes this can occur if you don’t normally make large purchase online. You may need to confirm with your bank.','mondca_patsatech');
 					}
 					else{
-						$error_message = __('Transaction Error. ','mondca_patsatech')  . $mess . '<pre>' . print_r( $mpgTxn, TRUE ) . '</pre>';
+						$error_message = __('Transaction Error. ','mondca_patsatech')  . $mess;
 					}
 					
 					edd_set_error( 'error_tranasction_failed', $error_message);
@@ -249,13 +288,10 @@ function mondca_process_payment($purchase_data) {
 			}else{
 				
 				$type = 'purchase';
-				//$cust_id = $order->order_key;
 				$amount = number_format($purchase_data['price'], 2, '.', '');
 				$pan = $purchase_data['post_data']['card_number'];
 				$cavv = $purchase_data['post_data']['card_cvc'];
-				$expiry_date = substr($purchase_data['post_data']['card_exp_year'], -2).sprintf("%02s", $purchase_data['post_data']['card_exp_month']);
-				$crypt = '7';
-				$status_check = 'false';	
+				$expiry_date = substr($purchase_data['post_data']['card_exp_year'], -2).sprintf("%02s", $purchase_data['post_data']['card_exp_month']);	
 				$stamp = date("YdmHisB");
 				$orderid = $stamp.'|'.$payment;
 				
@@ -263,18 +299,39 @@ function mondca_process_payment($purchase_data) {
 
 				//$arr=explode("|",$teststring);
 				$txnArray = array(
-								'type' => $type,
-				       			'order_id' => $orderid,
-				       			'cust_id' => '',
-				       			'amount' => $amount,
-				       			'pan' => $pan,
-				       			'expdate' => $expiry_date,
-								//'cavv' => $cavv
+								'type'		=> $type,
+				       			'order_id' 	=> $orderid,
+				       			'cust_id' 	=> '',
+				       			'amount' 	=> $amount,
+				       			'pan' 		=> $pan,
+				       			'expdate' 	=> $expiry_date,
+								'crypt_type'=>'7'
 				          		);
+				
+				/******************** Customer Information Object *********************/
+				
+				$mpgCustInfo = new mpgCustInfo();
+				
+				$billing = array(
+									 'first_name' => $purchase_data['post_data']['edd_first'],
+					                 'last_name' => $purchase_data['post_data']['edd_last'],
+					                 'address' => $purchase_data['post_data']['card_address'].', '.$purchase_data['post_data']['card_address_2'],
+					                 'city' => $purchase_data['post_data']['card_city'],
+					                 'province' => $purchase_data['post_data']['card_state'],
+					                 'postal_code' => $purchase_data['post_data']['card_zip']
+				                 );
+				
+				$mpgCustInfo->setBilling($billing);
+						
+				$mpgCustInfo->setEmail($purchase_data['post_data']['edd_email']);
 				
 				/********************** Transaction Object ****************************/
 				
 				$mpgTxn = new mpgTransaction($txnArray);
+
+				/******************** Set Customer Information ************************/
+				
+				$mpgTxn->setCustInfo($mpgCustInfo);
 				
 				/************************ Request Object ******************************/
 				
@@ -289,7 +346,6 @@ function mondca_process_payment($purchase_data) {
 				$mpgResponse = $mpgHttpPost->getMpgResponse();
 				
 				$txnno = $mpgResponse->getTxnNumber();
-				$receipt = explode("|",$mpgResponse->getReceiptId());
 				$respcode = $mpgResponse->getResponseCode();
 				$refnum = $mpgResponse->getReferenceNum();
 				$auth = $mpgResponse->getAuthCode();
@@ -300,15 +356,22 @@ function mondca_process_payment($purchase_data) {
 					
 					edd_update_payment_status($payment, 'publish');
 					
-					edd_insert_payment_note( $payment, sprintf( __('Moneris CA Payment %s. The SecurePay Transaction Id is %s', 'spxml_patsatech'), $mess, $txnno ) );
+					edd_insert_payment_note( $payment, sprintf( __('Moneris CA Payment %s. The Transaction Id is %s', 'mondca_patsatech'), $mess, $txnno ) );
 					
 					edd_empty_cart();
 					
 					edd_send_to_success_page();
 					
-				}else{
+				}else{					
 					
-					edd_set_error( 'error_tranasction_failed', __('Transaction Error. '.$mess.'<pre>'.print_r($mpgTxn,TRUE).'</pre>', 'mondca_patsatech'));
+					if ( strpos( $mess, 'DECLINED' ) === true ){
+						$error_message = __('Transaction Error. ','mondca_patsatech')  . $mess . ' - ' . __( 'Sometimes this can occur if you don’t normally make large purchase online. You may need to confirm with your bank.','mondca_patsatech');
+					}
+					else{
+						$error_message = __('Transaction Error. ','mondca_patsatech')  . $mess;
+					}
+					
+					edd_set_error( 'error_tranasction_failed', $error_message);
 					
 					edd_send_back_to_checkout('?payment-mode=' . $purchase_data['post_data']['edd-gateway']);
 					
@@ -409,155 +472,7 @@ function mondca_add_settings($settings) {
 }
 add_filter('edd_settings_gateways', 'mondca_add_settings');
 
-// Process Moneris subscription sign ups
-add_action( 'edd_mondca_subscr_signup', array( 'EDD_Recurring_Moneris_IPN', 'process_mondca_subscr_signup' ) );
 
-// Process Moneris subscription payments
-add_action( 'edd_mondca_subscr_payment', array( 'EDD_Recurring_Moneris_IPN', 'process_mondca_subscr_payment' ) );
-
-// Process Moneris subscription cancellations
-add_action( 'edd_mondca_subscr_cancel', array( 'EDD_Recurring_Moneris_IPN', 'process_mondca_subscr_cancel' ) );
-
-// Process Moneris subscription end of term notices
-add_action( 'edd_mondca_subscr_eot', array( 'EDD_Recurring_Moneris_IPN', 'process_mondca_subscr_eot' ) );
-
-
-class EDD_Recurring_Moneris_IPN {
-
-	/**
-	 * Processes the "signup" IPN notice
-	 *
-	 * @since  1.0
-	 * @return void
-	 */
-
-	static public function process_mondca_subscr_signup( $ipn_data ) {
-
-		$parent_payment_id = absint( $ipn_data['custom'] );
-
-		edd_update_payment_status( $parent_payment_id, 'publish' );
-
-		// Record transaction ID
-		edd_insert_payment_note( $parent_payment_id, sprintf( __( 'Moneris Subscription ID: %s', 'edd' ) , $ipn_data['subscr_id'] ) );
-
-		// Store the IPN track ID
-		update_post_meta( $parent_payment_id, '_edd_recurring_ipn_track_id', $ipn_data['ipn_track_id'] );
-
-		$user_id   = edd_get_payment_user_id( $ipn_data['custom'] );
-
-		// Set user as subscriber
-		EDD_Recurring_Customer::set_as_subscriber( $user_id );
-
-		// store the customer recurring ID
-		EDD_Recurring_Customer::set_customer_id( $user_id, $ipn_data['payer_id'] );
-
-		// Store the original payment ID in the customer meta
-		EDD_Recurring_Customer::set_customer_payment_id( $user_id, $ipn_data['custom'] );
-
-		// Set the customer's status to active
-		EDD_Recurring_Customer::set_customer_status( $user_id, 'active' );
-
-		// Calculate the customer's new expiration date
-		$new_expiration = EDD_Recurring_Customer::calc_user_expiration( $user_id, $parent_payment_id );
-
-		// Set the customer's new expiration date
-		EDD_Recurring_Customer::set_customer_expiration( $user_id, $new_expiration );
-
-	}
-
-	/**
-	 * Processes the recurring payments as they come in
-	 *
-	 * @since  1.0
-	 * @return void
-	 */
-
-	static public function process_mondca_subscr_payment( $ipn_data ) {
-
-		global $edd_options;
-
-		$parent_payment_id = absint( $ipn_data['custom'] );
-		$parent_payment    = get_post( $parent_payment_id );
-
-		if( empty( $parent_payment_id ) || ! $parent_payment ) {
-			return; // No parent payment
-		}
-
-		$signup_date = get_post_field( 'post_date', $parent_payment_id );
-
-		if( empty( $signup_date ) ) {
-			return;
-		}
-
-		$signup_date  = new DateTime( $signup_date );
-		$payment_date = new DateTime( $ipn_data['payment_date'] );
-
-		if( $signup_date->format( 'Y-m-d' ) == $payment_date->format( 'Y-m-d' ) ) {
-			return; // This is the initial payment
-		}
-
-		$payment_amount    = $ipn_data['mc_gross'];
-		$currency_code     = strtolower( $ipn_data['mc_currency'] );
-		$user_id           = edd_get_payment_user_id( $parent_payment_id );
-		// verify details
-		if( $currency_code != strtolower( $edd_options['currency'] ) ) {
-			// the currency code is invalid
-			edd_record_gateway_error( __( 'IPN Error', 'edd' ), sprintf( __( 'Invalid currency in IPN response. IPN data: ', 'edd' ), json_encode( $ipn_data ) ) );
-			return;
-		}
-
-		$key = md5( serialize( $ipn_data ) );
-
-		// Store the payment
-		EDD_Recurring()->record_subscription_payment( $parent_payment_id, $payment_amount, $ipn_data['txn_id'], $key );
-
-		// Set the customer's status to active
-		EDD_Recurring_Customer::set_customer_status( $user_id, 'active' );
-
-		// Calculate the customer's new expiration date
-		$new_expiration = EDD_Recurring_Customer::calc_user_expiration( $user_id, $parent_payment_id );
-
-		// Set the customer's new expiration date
-		EDD_Recurring_Customer::set_customer_expiration( $user_id, $new_expiration );
-
-	}
-
-	/**
-	 * Processes the "cancel" IPN notice
-	 *
-	 * @since  1.0
-	 * @return void
-	 */
-
-	static public function process_mondca_subscr_cancel( $ipn_data ) {
-
-		$user_id = edd_get_payment_user_id( $ipn_data['custom'] );
-
-		// set the customer status
-		//EDD_Recurring_Customer::set_customer_status( $user_id, 'cancelled' );
-
-		// Set the payment status to cancelled
-		edd_update_payment_status( $ipn_data['custom'], 'cancelled' );
-
-	}
-
-	/**
-	 * Processes the "end of term (eot)" IPN notice
-	 *
-	 * @since  1.0
-	 * @return void
-	 */
-
-	static public function process_mondca_subscr_eot( $ipn_data ) {
-
-		$user_id   = edd_get_payment_user_id( $ipn_data['custom'] );
-
-		// set the customer status
-		EDD_Recurring_Customer::set_customer_status( $user_id, 'expired' );
-
-	}
-
-}
 
 #################### mpgGlobals ###########################################
 
@@ -1466,7 +1381,6 @@ class mpgCvdInfo
  * @since       1.5
  * @return      bool
  */
-
 function eddmondca_is_recurring_purchase( $purchase_data ) {
 
 	if ( ! class_exists( 'EDD_Recurring' ) )
