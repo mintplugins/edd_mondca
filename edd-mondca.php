@@ -156,7 +156,7 @@ function mondca_process_payment($purchase_data) {
 					
 				}
 				
-				$startDate = date('Y/m/d');
+				$startDate = date('Y/m/d', strtotime('+1 day', strtotime(date('Y/m/d'))));
 				
 				//if($trialAmount <= 0){
 					//$startDate = date('Y/m/d', strtotime($startDate. ' + 1 '.$recurUnit));
