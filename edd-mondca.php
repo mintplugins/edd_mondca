@@ -1104,21 +1104,21 @@ function endHandler($parser,$name){
 
 class mpgRequest{
 
- var $txnTypes =array('purchase'=> array('order_id','cust_id', 'amount', 'pan', 'expdate', 'crypt_type', 'dynamic_descriptor'),
+ var $txnTypes =array('purchase'=> array('order_id','cust_id', 'amount', 'pan', 'expdate', 'crypt_type'),
                       'refund' => array('order_id', 'amount', 'txn_number', 'crypt_type'),
-					  'idebit_purchase'=>array('order_id', 'cust_id', 'amount','idebit_track2', 'dynamic_descriptor'),
+					  'idebit_purchase'=>array('order_id', 'cust_id', 'amount','idebit_track2'),
 					  'idebit_refund'=>array('order_id','amount','txn_number'),
 					  'purchase_reversal'=>array('order_id','amount'),
 					  'refund_reversal'=>array('order_id','amount'),
-                      'ind_refund' => array('order_id','cust_id', 'amount','pan','expdate', 'crypt_type', 'dynamic_descriptor'),
-                      'preauth' =>array('order_id','cust_id', 'amount', 'pan', 'expdate', 'crypt_type', 'dynamic_descriptor'),
+                      'ind_refund' => array('order_id','cust_id', 'amount','pan','expdate', 'crypt_type'),
+                      'preauth' =>array('order_id','cust_id', 'amount', 'pan', 'expdate', 'crypt_type'),
                       'reauth' =>array('order_id','cust_id', 'amount', 'orig_order_id', 'txn_number', 'crypt_type'),
                       'completion' => array('order_id', 'comp_amount','txn_number', 'crypt_type'),
                       'purchasecorrection' => array('order_id', 'txn_number', 'crypt_type'),
                       'opentotals' => array('ecr_number'),
                       'batchclose' => array('ecr_number'),
-                      'cavv_purchase'=> array('order_id','cust_id', 'amount', 'pan', 'expdate', 'cavv', 'dynamic_descriptor'),
-                      'cavv_preauth' =>array('order_id','cust_id', 'amount', 'pan', 'expdate', 'cavv', 'dynamic_descriptor'),
+                      'cavv_purchase'=> array('order_id','cust_id', 'amount', 'pan', 'expdate', 'cavv'),
+                      'cavv_preauth' =>array('order_id','cust_id', 'amount', 'pan', 'expdate', 'cavv'),
 					  'card_verification' =>array('order_id','cust_id','pan','expdate'),
                       'recur_update' => array('order_id', 'cust_id', 'pan', 'expdate', 'recur_amount',
                       					'add_num_recurs', 'total_num_recurs', 'hold', 'terminate')
@@ -1189,7 +1189,7 @@ function toXML(){
 
     $txnXMLString .="</$txnType>";
 
-    $xmlString .=$txnXMLString;
+    $xmlString =$txnXMLString;
 
 	return $xmlString;
 
@@ -1348,6 +1348,8 @@ class mpgRecur{
 
  function toXML()
  {
+   $xmlString = NULL; 
+   
    foreach($this->recurTemplate as $tag)
    {
      $xmlString .= "<$tag>". $this->params[$tag] ."</$tag>";
