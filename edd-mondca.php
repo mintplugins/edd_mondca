@@ -178,8 +178,8 @@ function mondca_process_payment($purchase_data) {
 					'recur_unit'=>$recurUnit, // (day | week | month)
 					'start_date'=>$startDate, //yyyy/mm/dd
 					'num_recurs'=>$numRecurs,
-					'start_now'=>true,
-					'period' => $recurInterval,
+					'start_now'=> "true",
+					'period' => $period,
 					'recur_amount'=> number_format($recurAmount, 2, '.', '')
 				);
 				
