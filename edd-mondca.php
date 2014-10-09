@@ -296,7 +296,8 @@ function mondca_process_payment($purchase_data) {
 					
 					edd_update_payment_status($payment, 'publish');
 					
-					edd_insert_payment_note( $order, sprintf( __('Moneris CA Payment %s. The SecurePay Transaction Id is %s', 'spxml_patsatech'), $mess, $txnno ) );
+					edd_insert_payment_note( $payment, sprintf( __('Moneris CA Payment %s. The SecurePay Transaction Id is %s', 'spxml_patsatech'), $mess, $txnno ) );
+					
 					edd_empty_cart();
 					
 					edd_send_to_success_page();
