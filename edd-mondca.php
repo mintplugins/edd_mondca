@@ -144,6 +144,7 @@ function mondca_process_payment($purchase_data) {
 						switch( $times ) {
 							// Unlimited
 							case '0' :
+								$numRecurs = '99999999999';
 								break;
 							// Recur the number of times specified
 							default :
