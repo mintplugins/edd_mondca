@@ -233,7 +233,7 @@ function mondca_process_payment($purchase_data) {
 					
 					edd_insert_payment_note( $payment,  ' Recurring Success: ' . $mpgResponse->getRecurSuccess() );
 					
-					edd_insert_payment_note( $payment,  ' Recurring Info: ' . json_encode( $recurArray ) . ' $mpgRecur: ' . $mpgRecur);
+					edd_insert_payment_note( $payment,  ' Recurring Info: ' . json_encode( $recurArray ) . ' $mpgRecur: ' . json_encode($mpgRecur) );
 					
 					edd_empty_cart();
 					
@@ -245,7 +245,7 @@ function mondca_process_payment($purchase_data) {
 						$error_message = __('Transaction Error. ','mondca_patsatech')  . $mess . ' - ' . __( 'Sometimes this can occur if you don’t normally make large purchase online. You may need to confirm with your bank.','mondca_patsatech') . '<pre>' . print_r( $mpgTxn, TRUE ) . '</pre>';
 					}
 					else{
-						$error_message = __('Transaction Error. ','mondca_patsatech')  . $mess . '<pre>' . print_r( $mpgTxn, TRUE ) . '</pre>';
+						$error_message = __('Transaction Error. ' . $respcode,'mondca_patsatech')  . $mess . '<pre>' . print_r( $mpgTxn, TRUE ) . '</pre>';
 					}
 					
 					edd_set_error( 'error_tranasction_failed', $error_message);
